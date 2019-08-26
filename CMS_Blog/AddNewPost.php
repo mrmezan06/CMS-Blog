@@ -9,43 +9,48 @@ require_once("Include/function.php");
 ?>
 <?php
 if (isset($_POST["Submit"])) {
+    $Title = $_POST["Title"];
     $Category = $_POST["Category"];
+    $Post = $_POST["Post"];
     date_default_timezone_set("Asia/Dhaka");
     $currentTime = time();
     //  $datetime = strftime("%Y-%m-%d %H:%M:%S",$currentTime);
     $Datetime = strftime("%B-%d-%Y %H:%M:%S", $currentTime);
     $Admin = "Mezan";
-    if (empty($Category)) {
-        $_SESSION["ErrorMessage"] = "All fields must be filled out.";
-        Redirect_to("categories.php");
+    $Image = $_FILES["Image"]["name"];
+    $Target = "Upload/" . basename($_FILES["Image"]["name"]);
+    if (empty($Title)) {
+        $_SESSION["ErrorMessage"] = "Title can't be empty.";
+        Redirect_to("AddNewPost.php");
         //echo "<a href=\"dashboard.php\">dashboard</a>";
-    } else if (strlen($Category) > 99) {
-        $_SESSION["ErrorMessage"] = "Too long Name for Category.";
-        Redirect_to("categories.php");
+    } else if (strlen($Title) < 2) {
+        $_SESSION["ErrorMessage"] = "Title can't be less than 2 characaters.";
+        Redirect_to("AddNewPost.php");
     } else {
         global $connection;
-        $Query = "INSERT INTO category(datetime,name,creatorname)
-            VALUES('$Datetime','$Category','$Admin')";
+        $Query = "INSERT INTO admin_panel(datetime,title,category,author,image,post)
+            VALUES('$Datetime','$Title','$Category','$Admin','$Image','$Post')";
         $Execute = mysqli_query($connection, $Query);
         if ($Execute) {
-            $_SESSION["SuccessMessage"] = "Category Added Successfully.";
-            Redirect_to("categories.php");
+            move_uploaded_file($_FILES["Image"]["tmp_name"], $Target);
+            $_SESSION["SuccessMessage"] = "Post Added Successfully.";
+            Redirect_to("AddNewPost.php");
         } else {
-            $_SESSION["ErrorMessage"] = "Category failed to add.";
-            Redirect_to("categories.php");
+            $_SESSION["ErrorMessage"] = "Something went wrong.";
+            Redirect_to("AddNewPost.php");
         }
     }
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Categories</title>
+    <title>Add New Post</title>
     <link rel="stylesheet" href="Bootstrap/bootstrap.min.css">
     <!-- <link rel="stylesheet" href="css/adminstyle.css"> -->
     <style>
@@ -100,8 +105,8 @@ if (isset($_POST["Submit"])) {
                 &nbsp;
                 <ul class="nav">
                     <li class="nav-item" style="width:12em;"><a class="nav-link" id="sitem" href="dashboard.php">Dashboard</a></li>
-                    <li class="nav-item" style="width:12em;"><a class="nav-link" id="sitem" href="AddNewPost.php">Add New Post</a></li>
-                    <li class="nav-item" style="width:12em;"><a class="nav-link active" id="sitem" href="categories.php">Categories</a></li>
+                    <li class="nav-item" style="width:12em;"><a class="nav-link active" id="sitem" href="AddNewPost.php">Add New Post</a></li>
+                    <li class="nav-item" style="width:12em;"><a class="nav-link" id="sitem" href="categories.php">Categories</a></li>
                     <li class="nav-item" style="width:12em;"><a class="nav-link" id="sitem" href="#">Manage Admins</a></li>
                     <li class="nav-item" style="width:12em;"><a class="nav-link" id="sitem" href="#">Comments</a></li>
                     <li class="nav-item" style="width:12em;"><a class="nav-link" id="sitem" href="#">Live Blog</a></li>
@@ -109,53 +114,52 @@ if (isset($_POST["Submit"])) {
                 </ul>
             </div>
             <div class="col-sm-10">
-                <h1>Manage Categories</h1>
+                <h1>Add New Post</h1>
                 <?php
                 echo Message();
                 echo SuccessMessage();
                 ?>
-                <div>
-                    <form class="myform" action="categories.php" method="post">
+                <div class="myform">
+                    <form action="AddNewPost.php" method="post" enctype="multipart/form-data">
                         <fieldset>
                             <div class="form-group">
-                                <label for="categoryname"><span class="FieldInfo">Name:</span></label>
-                                <input class="form-control" type="text" name="Category" id="categoryname" placeholder="Name">
+                                <label for="title"><span class="FieldInfo">Title:</span></label>
+                                <input class="form-control" type="text" name="Title" id="title" placeholder="Title">
                             </div>
-                            <input class="btn btn-outline-success btn-block" type="submit" name="Submit" value="Add New Category">
+                            <div class="form-group">
+                                <label for="categoryselect"><span class="FieldInfo">Category:</span></label>
+                                <select class="form-control" id="categoryselect" name="Category">
+
+                                    <?php
+                                    global $connection;
+                                    $ViewQuery = "SELECT * FROM category ORDER BY datetime desc";
+                                    $Execute = mysqli_query($connection, $ViewQuery);
+
+
+                                    while ($DataRows = mysqli_fetch_array($Execute)) {
+                                        $Id = $DataRows["id"];
+                                        $CategoryName = $DataRows["name"];
+                                        ?>
+                                        <option>
+                                            <?php echo $CategoryName; ?>
+                                        </option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="imageselect"><span class="FieldInfo">Select Image:</span></label>
+                                <input type="file" class="form-control" name="Image" id="imageselect">
+                            </div>
+                            <div class="form-group">
+                                <label for="postarea"><span class="FieldInfo">Post:</span></label>
+                                <textarea class="form-control" name="Post" id="postarea" cols="30" rows="5"></textarea>
+                            </div>
+                            <input class="btn btn-outline-success btn-block" type="submit" name="Submit" value="Add New Post">
                         </fieldset>
                     </form>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <tr>
-                            <th>Sr No.</th>
-                            <th>Date & Time</th>
-                            <th>Category Name</th>
-                            <th>Author Name</th>
-                        </tr>
-                        <?php
-                        global $connection;
-                        $ViewQuery = "SELECT * FROM category ORDER BY name";
-                        $Execute = mysqli_query($connection, $ViewQuery);
-                        $SrNo = 0;
 
-                        while ($DataRows = mysqli_fetch_array($Execute)) {
-                            $Id = $DataRows["id"];
-                            $Datetime = $DataRows["datetime"];
-                            $CategoryName = $DataRows["name"];
-                            $AuthorName = $DataRows["creatorname"];
-                            $SrNo++;
 
-                            ?>
-                            <tr>
-                                <td><?php echo $SrNo; ?></td>
-                                <td><?php echo $Datetime; ?></td>
-                                <td><?php echo $CategoryName; ?></td>
-                                <td><?php echo $AuthorName; ?></td>
-                            </tr>
-                        <?php } ?>
-                    </table>
-                </div>
             </div>
         </div>
     </div>
